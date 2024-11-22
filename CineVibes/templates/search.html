@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Buscar Películas{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <h2 class="text-light text-center mb-4">Buscar Películas</h2>
+    <div class="search-container mb-4">
+        <input type="text" id="search-input" class="form-control form-control-lg bg-transparent text-light" placeholder="Buscar películas..." autocomplete="off">
+        <div id="search-results" class="search-results mt-2"></div>
+    </div>
+
+    <h3 class="text-light text-center mb-4">Recomendaciones</h3>
+    <div class="row" id="recommendations">
+        {% for movie in recommendations %}
+        <div class="col-md-4 col-sm-6 mb-4">
+            <div class="movie-card">
+                <img src="{{ movie.poster }}" class="card-img-top movie-poster" alt="{{ movie.title }}">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-light">{{ movie.title }}</h5>
+                    <p class="card-text text-light">Año: {{ movie.year }}</p>
+                    <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger led-effect">Ver Película</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+let timeoutId;
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(timeoutId);
+    const query = this.value.trim();
+
+    if (query.length > 2) {
+        timeoutId = setTimeout(() => {
+            fetchSearchResults(query);
+        }, 300);
+    } else {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+    }
+});
+
+function fetchSearchResults(query) {
+    fetch(`/search?q=${encodeURIComponent(query)}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displaySearchResults(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function displaySearchResults(movies) {
+    searchResults.innerHTML = '';
+    if (movies.length > 0) {
+        movies.forEach(movie => {
+            const div = document.createElement('div');
+            div.className = 'search-result';
+            div.innerHTML = `
+                <img src="${movie.Poster}" alt="${movie.Title}" class="search-result-poster">
+                <div class="search-result-info">
+                    <h4>${movie.Title}</h4>
+                    <p>${movie.Year}</p>
+                </div>
+            `;
+            div.addEventListener('click', () => {
+                window.location.href = `/movie/${movie.imdbID}`;
+            });
+            searchResults.appendChild(div);
+        });
+        searchResults.style.display = 'block';
+    } else {
+        searchResults.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    if (!searchResults.contains(event.target) && event.target !== searchInput) {
+        searchResults.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #121212;
+}
+
+.movie-card {
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.movie-card:hover {
+    transform: scale(1.05);
+    border: 2px solid #ff0000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+}
+
+.movie-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 15px;
+    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+}
+
+.movie-card:hover::after {
+    opacity: 0.5;
+}
+
+.movie-poster {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+}
+
+.card-body {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s ease;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+.search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    border-top: none;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.search-result {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+.search-result:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.search-result-poster {
+    width: 50px;
+    height: 75px;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+.search-result-info {
+    flex-grow: 1;
+}
+
+.search-result-info h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #ffffff;
+}
+
+.search-result-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+@media (max-width: 768px) {
+    .movie-card {
+        height: auto;
+    }
+    .movie-poster {
+        height: 300px;
+    }
+}
+</style>
+{% endblock %}

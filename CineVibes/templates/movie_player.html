@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title | default('Película Desconocida') }} ({{ movie.year | default('N/A') }}) - CineVibes{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col-12 col-lg-8 mb-4">
+            <div class="movie-player p-4 rounded shadow">
+                <h2 class="movie-title-player mb-3" style="color: #ff0000;">{{ movie.title | default('Película Desconocida') }} ({{ movie.year | default('N/A') }})</h2>
+
+                {% if movie.video_link %}
+                <div class="embed-responsive embed-responsive-16by9" style="height: 500px;">
+                    <iframe class="embed-responsive-item"
+                        src="{{ movie.video_link }}"
+                        sandbox="allow-same-origin allow-scripts allow-forms"
+                        allowfullscreen
+                        referrerpolicy="no-referrer"
+                        style="width: 100%; height: 100%; border: 0;">
+                    </iframe>
+                </div>
+                <div class="alert alert-info mt-3" role="alert" style="font-size: 1rem; background-color: rgba(255, 0, 0, 0.1); color: #ff0000; border-color: #ff0000;">
+                    Doble clic en el video para pantalla completa.
+                </div>
+                {% else %}
+                <div class="alert alert-warning" style="background-color: rgba(255, 0, 0, 0.1); color: #ff0000; border-color: #ff0000;">
+                    <i class="fas fa-exclamation-triangle"></i> Lo sentimos, el video no está disponible en este momento.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="movie-info p-4 mb-4 rounded shadow">
+                <h3 class="mb-3" style="color: #ff0000;">Detalles de la Película</h3>
+                <p><i class="fas fa-film" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Director:</strong> {{ movie.director | default('N/A') }}</p>
+                <p><i class="fas fa-calendar-alt" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Año:</strong> {{ movie.year | default('N/A') }}</p>
+                <p><i class="fas fa-star" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Calificación IMDb:</strong> {{ movie.imdb_rating if movie.imdb_rating != 'N/A' else 'N/A' }}</p>
+                <p><i class="fas fa-clock" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Duración:</strong> {{ movie.runtime | default('N/A') }}</p>
+                <p><i class="fas fa-language" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Idioma:</strong> {{ movie.language | default('N/A') }}</p>
+                <p><i class="fas fa-globe" style="color: #ff0000;"></i> <strong style="color: #ff0000;">País:</strong> {{ movie.country | default('N/A') }}</p>
+                <p><i class="fas fa-trophy" style="color: #ff0000;"></i> <strong style="color: #ff0000;">Premios:</strong> {{ movie.awards | default('N/A') }}</p>
+                <h4 class="mt-4 mb-2" style="color: #ff0000;">Sinopsis</h4>
+                <p>{{ movie.plot | default('N/A') }}</p>
+                <h4 class="mt-4 mb-2" style="color: #ff0000;">Actores</h4>
+                <p>{{ movie.actors | default('N/A') }}</p>
+                <h4 class="mt-4 mb-2" style="color: #ff0000;">Género</h4>
+                <p>{{ movie.genre | default('N/A') }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="comments-section p-4 rounded shadow mb-4">
+        <h3 style="color: #ff0000;">Comentarios</h3>
+        <form id="comment-form" method="POST" action="{{ url_for('add_review', movie_id=movie.imdb_id) }}">
+            <div class="form-group">
+                <textarea class="form-control red-glow" name="content" rows="3" placeholder="Escribe tu comentario aquí..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="rating" style="color: #ff0000;">Calificación:</label>
+                <div class="star-rating">
+                    <input type="radio" id="star5" name="rating" value="5" required /><label for="star5"></label>
+                    <input type="radio" id="star4" name="rating" value="4" /><label for="star4"></label>
+                    <input type="radio" id="star3" name="rating" value="3" /><label for="star3"></label>
+                    <input type="radio" id="star2" name="rating" value="2" /><label for="star2"></label>
+                    <input type="radio" id="star1" name="rating" value="1" /><label for="star1"></label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-danger led-effect">Enviar Comentario</button>
+        </form>
+
+        <div class="comments-list mt-4">
+            {% for review in reviews %}
+                <div class="comment mb-3 p-2 border rounded" id="review-{{ review.id }}">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('static', filename=review.user_profile_pic) if review.user_profile_pic else url_for('static', filename='images/default_profile.png') }}"
+                                 alt="Foto de Perfil"
+                                 class="profile-img" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+                            <strong style="color: #ff0000;">{{ review.user_nickname }}</strong>
+                            <span style="margin-left: 10px;">({{ review.created_at }})</span>
+                        </div>
+                        {% if user and user.id == review.user_id %}
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary edit-review" data-review-id="{{ review.id }}">Editar</button>
+                                <button class="btn btn-sm btn-outline-danger delete-review" data-review-id="{{ review.id }}">Eliminar</button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <p class="review-text">{{ review.review_text }}</p>
+                    <p style="color: #ff0000;">Calificación:
+                        {% for i in range(review.rating) %}
+                            <i class="fas fa-star"></i>
+                        {% endfor %}
+                        {% for i in range(5 - review.rating) %}
+                            <i class="far fa-star"></i>
+                        {% endfor %}
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+
+    .movie-player, .movie-info, .comments-section {
+        background: rgba(255, 0, 0, 0.1);
+        border-radius: 15px;
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: 2px solid #ff0000;
+    }
+
+    .movie-player:hover, .movie-info:hover, .comments-section:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+    }
+
+    .btn-danger {
+        background-color: #ff0000;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #cc0000;
+        box-shadow: 0 0 15px #ff0000;
+    }
+
+    .led-effect {
+        box-shadow: 0 0 10px #ff0000;
+        transition: all 0.3s ease;
+    }
+
+    .led-effect:hover {
+        box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+    }
+
+    .form-control:focus {
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.2rem rgba(255, 0, 0, 0.25);
+    }
+
+    .red-glow {
+        background-color: rgba(255, 0, 0, 0.1);
+        border: 1px solid rgba(255, 0, 0, 0.5);
+        color: #ffffff;
+        transition: all 0.3s ease;
+    }
+
+    .red-glow:focus {
+        background-color: rgba(255, 0, 0, 0.2);
+        border-color: #ff0000;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+
+    .star-rating {
+        display: inline-block;
+        direction: rtl;
+    }
+
+    .star-rating input[type="radio"] {
+        display: none;
+    }
+
+    .star-rating label {
+        color: #bbb;
+        font-size: 1.5em;
+        padding: 0;
+        cursor: pointer;
+        -webkit-transition: all .3s ease-in-out;
+        transition: all .3s ease-in-out;
+    }
+
+    .star-rating label:before {
+        content: "\2605";
+    }
+
+    .star-rating input[type="radio"]:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+        color: #f2b600;
+    }
+
+    @media (max-width: 768px) {
+        .embed-responsive {
+            height: 300px;
+        }
+    }
+
+    .form-control, .form-control:focus {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit review
+    document.querySelectorAll('.edit-review').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-review-id');
+            const reviewElement = document.getElementById(`review-${reviewId}`);
+            const reviewText = reviewElement.querySelector('.review-text').textContent;
+            const rating = reviewElement.querySelectorAll('.fa-star').length;
+
+            const formHtml = `
+                <form class="edit-review-form" data-review-id="${reviewId}">
+                    <textarea class="form-control red-glow mb-2" name="content" rows="3" required>${reviewText}</textarea>
+                    <div class="form-group">
+                        <label for="rating">Calificación:</label>
+                        <div class="star-rating">
+                            <input type="radio" id="star5-edit-${reviewId}" name="rating" value="5" ${rating === 5 ? 'checked' : ''} required /><label for="star5-edit-${reviewId}"></label>
+                            <input type="radio" id="star4-edit-${reviewId}" name="rating" value="4" ${rating === 4 ? 'checked' : ''} /><label for="star4-edit-${reviewId}"></label>
+                            <input type="radio" id="star3-edit-${reviewId}" name="rating" value="3" ${rating === 3 ? 'checked' : ''} /><label for="star3-edit-${reviewId}"></label>
+                            <input type="radio" id="star2-edit-${reviewId}" name="rating" value="2" ${rating === 2 ? 'checked' : ''} /><label for="star2-edit-${reviewId}"></label>
+                            <input type="radio" id="star1-edit-${reviewId}" name="rating" value="1" ${rating === 1 ? 'checked' : ''} /><label for="star1-edit-${reviewId}"></label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-secondary cancel-edit">Cancelar</button>
+                </form>
+            `;
+
+            reviewElement.innerHTML = formHtml;
+        });
+    });
+
+    // Delete review
+    document.querySelectorAll('.delete-review').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
+                const reviewId = this.getAttribute('data-review-id');
+                fetch(`/review/${reviewId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`review-${reviewId}`).remove();
+                    } else {
+                        alert('Error al eliminar el comentario');
+                    }
+                });
+            }
+        });
+    });
+
+    // Handle edit form submission
+    document.addEventListener('submit', function(e) {
+        if (e.target.classList.contains('edit-review-form')) {
+            e.preventDefault();
+            const reviewId = e.target.getAttribute('data-review-id');
+            const formData = new FormData(e.target);
+            fetch(`/review/${reviewId}`, {
+                method: 'PUT',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();  // Reload the page to show the updated review
+                } else {
+                    alert('Error al actualizar el comentario');
+                }
+            });
+        }
+    });
+
+    // Handle cancel edit
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('cancel-edit')) {
+            location.reload();  // Reload the page to cancel the edit
+        }
+    });
+});
+</script>
+{% endblock %}
